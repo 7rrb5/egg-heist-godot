@@ -161,10 +161,10 @@ func _physics_process(delta: float) -> void:
 	var right := basis.x; right.y = 0; right = right.normalized()
 	var dir := (right * input_vec.x + forward * -input_vec.y)
 	if dir.length() > 1.0: dir = dir.normalized()
-	var speed_stat := max(1.0, float(Save.data.speed))
-	var trail_mult := 1.0 + int(Save.data.trail_level) * 0.08
-	var move_speed := clamp(6.8 + log(speed_stat + 1.0) / log(10.0) * 1.55, 7.0, 23.0) * trail_mult
-	var accel := 34.0
+	var speed_stat: float = maxf(1.0, float(Save.data.speed))
+	var trail_mult: float = 1.0 + float(int(Save.data.trail_level)) * 0.08
+	var move_speed: float = clampf(6.8 + log(speed_stat + 1.0) / log(10.0) * 1.55, 7.0, 23.0) * trail_mult
+	var accel: float = 34.0
 	velocity.x = move_toward(velocity.x, dir.x * move_speed, accel * delta)
 	velocity.z = move_toward(velocity.z, dir.z * move_speed, accel * delta)
 	move_and_slide()
