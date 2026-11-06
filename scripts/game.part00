@@ -13,10 +13,10 @@ const BIOMES = [
 	{"name":"ABYSS OCEAN", "guardian":"Moby", "tex":"abyss", "color":Color(0.08,0.28,0.62), "speed":2500000.0, "gspd":21.0},
 	{"name":"PREHISTORIC", "guardian":"TRex", "tex":"grass_dark", "color":Color(0.28,0.57,0.18), "speed":18000000.0, "gspd":23.0},
 	{"name":"COSMIC", "guardian":"CosmicSkeleton", "tex":"cosmic", "color":Color(0.22,0.08,0.48), "speed":700000000.0, "gspd":25.0},
-	{"name":"CHERRY BLOSSOM", "guardian":"OniTiger", "tex":"sakura", "color":Color(1.0,0.55,0.76), "speed":2500000000.0, "gspd":27.0},
+	{"name":"CHERRY BLOSSOM", "guardian":"NineTailFox", "tex":"sakura", "color":Color(1.0,0.55,0.76), "speed":2500000000.0, "gspd":27.0},
 	{"name":"TITAN TEMPLE", "guardian":"GorillaKing", "tex":"temple", "color":Color(0.66,0.58,0.36), "speed":7000000000.0, "gspd":29.0},
-	{"name":"ANGELS & DEMONS", "guardian":"ArchGuardian", "tex":"heaven", "color":Color(0.78,0.84,0.98), "speed":20000000000.0, "gspd":31.0},
-	{"name":"ENCHANTED FOREST", "guardian":"Sunlion", "tex":"enchanted", "color":Color(0.24,0.78,0.44), "speed":50000000000.0, "gspd":33.0}
+	{"name":"ANGELS & DEMONS", "guardian":"AngelDemon", "tex":"heaven", "color":Color(0.78,0.84,0.98), "speed":20000000000.0, "gspd":31.0},
+	{"name":"ENCHANTED FOREST", "guardian":"EnchantedLion", "tex":"enchanted", "color":Color(0.24,0.78,0.44), "speed":50000000000.0, "gspd":33.0}
 ]
 
 const FARM_PRICES = [25000.0, 150000.0, 900000.0, 5000000.0, 30000000.0, 180000000.0, 1100000000.0, 7500000000.0, 52000000000.0, 380000000000.0, 2900000000000.0, 22000000000000.0]
