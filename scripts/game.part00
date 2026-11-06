@@ -51,6 +51,7 @@ var shop_title: Label
 var shop_info: Label
 var shop_buy: Button
 var current_shop := ""
+var auto_shop_inside := false
 
 func _ready() -> void:
 	name = "EggHeistWorld"
@@ -73,6 +74,7 @@ func _process(delta: float) -> void:
 			Save.save_data()
 	_update_hud()
 	_update_prompt()
+	_check_auto_shops()
 
 func _setup_environment() -> void:
 	var env_node := WorldEnvironment.new()
