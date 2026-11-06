@@ -54,6 +54,9 @@ jobs:
             exit 1
           fi
 
+      - name: Functional gameplay test
+        run: godot --headless --path . --script res://scripts/functional_smoke.gd
+
       - name: Export Web
         run: |
           rm -rf web
