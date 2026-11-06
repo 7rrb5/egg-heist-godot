@@ -29,7 +29,19 @@ jobs:
         with:
           version: 4.7.2
           use-dotnet: false
-          include-templates: true
+          include-templates: false
+
+      - name: Install official Godot 4.7.2 export templates
+        run: |
+          set -euxo pipefail
+          curl -L --retry 3 -o /tmp/godot_templates.tpz             https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
+          rm -rf /tmp/godot_tpl
+          mkdir -p /tmp/godot_tpl
+          unzip -q /tmp/godot_templates.tpz -d /tmp/godot_tpl
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          cp -a /tmp/godot_tpl/templates/. "$HOME/.local/share/godot/export_templates/4.7.2.stable/"
+          test -f "$HOME/.local/share/godot/export_templates/4.7.2.stable/web_nothreads_release.zip"
+          ls -lh "$HOME/.local/share/godot/export_templates/4.7.2.stable/web_nothreads_release.zip"
 
       - name: Import project
         run: godot --headless --path . --import --quit
@@ -37,7 +49,10 @@ jobs:
       - name: Export Web
         run: |
           mkdir -p web
-          godot --headless --path . --export-release Web web/index.html
+          godot --verbose --headless --path . --export-release "Web" web/index.html
+          test -f web/index.html
+          test -f web/index.wasm
+          test -f web/index.pck
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
