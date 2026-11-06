@@ -21,29 +21,55 @@ func _build_safe_zone_details() -> void:
 
 func _build_farms() -> void:
 	for i in range(12):
-		var side := -1 if i<6 else 1
-		var row := i if i<6 else i-6
-		var center:=Vector3(side*42,0.04,151-row*26.0)
+		var side: int = -1 if i < 6 else 1
+		var row: int = i if i < 6 else i - 6
+		var center := Vector3(float(side) * 43.0, 0.04, 149.0 - float(row) * 25.0)
 		farm_centers.append(center)
-		_build_farm(i,center)
+		_build_farm(i, center)
 
 func _build_farm(index: int, center: Vector3) -> void:
-	var floor_tint:=Color(1,1,1) if index==0 else Color(0.86,0.9,0.86)
-	_static_box(self,center+Vector3(0,-0.02,0),Vector3(34,0.10,22),_material("grass",floor_tint),false)
-	var wood:=_color_mat(Color(0.43,0.24,0.09))
-	# Low wooden pen; open gate toward central road.
-	for x in [-17,17]:
-		for z in [-9,-3,3,9]: _static_box(self,center+Vector3(x,1.0,z),Vector3(0.45,1.8,5.0),wood,false)
-	for zedge in [-11,11]:
-		for x in [-13,-7,7,13]: _static_box(self,center+Vector3(x,1.0,zedge),Vector3(5.2,1.8,0.45),wood,false)
-	# Farm board outside gate.
-	var board:=Node3D.new(); board.position=center+Vector3(-8*sign(center.x),2.4,-13.2); add_child(board)
-	_static_box(board,Vector3.ZERO,Vector3(10,4.5,0.55),_color_mat(Color(0.12,0.16,0.13)),false)
-	var lab:=Label3D.new(); lab.name="FarmLabel"; lab.font_size=40; lab.outline_size=10; lab.position=Vector3(0,0,-0.35); lab.billboard=BaseMaterial3D.BILLBOARD_ENABLED; board.add_child(lab)
-	board.set_meta("kind","farm_upgrade"); board.set_meta("farm_id",index); board.add_to_group("interactable"); farm_boards.append(board)
-	# Player farm includes treadmill; other plots show one too for online visual parity.
-	var treadmill:=_make_treadmill(center+Vector3(0,0,-5.8), index)
-	if index==0: player_treadmill=treadmill
+	var floor_tint := Color(1,1,1) if index == 0 else Color(0.92,0.96,0.92)
+	_static_box(self, center + Vector3(0,-0.02,0), Vector3(35,0.10,22), _material("grass",floor_tint), false)
+
+	var rail := _color_mat(Color(0.67,0.31,0.055), Color.BLACK, 0.72)
+	var post := _color_mat(Color(0.095,0.11,0.13), Color.BLACK, 0.45, 0.20)
+
+	for x in [-17.5,17.5]:
+		for z in [-10.5,-3.5,3.5,10.5]:
+			_static_box(self,center+Vector3(x,1.0,z),Vector3(0.62,2.0,0.62),post,false)
+		for z2 in [-7.0,0.0,7.0]:
+			_static_box(self,center+Vector3(x,1.28,z2),Vector3(0.23,0.26,6.3),rail,false)
+			_static_box(self,center+Vector3(x,0.64,z2),Vector3(0.20,0.18,6.3),rail,false)
+
+	for zedge in [-11.0,11.0]:
+		for x in [-15.0,-8.5,8.5,15.0]:
+			_static_box(self,center+Vector3(x,1.0,zedge),Vector3(0.62,2.0,0.62),post,false)
+		for x2 in [-11.7,11.7]:
+			_static_box(self,center+Vector3(x2,1.28,zedge),Vector3(6.1,0.26,0.23),rail,false)
+			_static_box(self,center+Vector3(x2,0.64,zedge),Vector3(6.1,0.18,0.20),rail,false)
+
+	var road_dir: float = -1.0 if center.x > 0.0 else 1.0
+	var board := Node3D.new()
+	board.position = center + Vector3(road_dir * 19.0,2.3,-6.7)
+	board.rotation.y = PI/2.0 * road_dir
+	add_child(board)
+	_static_box(board,Vector3.ZERO,Vector3(8.6,4.4,0.52),_color_mat(Color(0.07,0.09,0.08)),false)
+	_static_box(board,Vector3(0,2.34,0),Vector3(9.0,0.26,0.6),_color_mat(Color(0.24,1.0,0.10),Color(0.12,0.78,0.05)),false)
+	var lab := Label3D.new()
+	lab.name = "FarmLabel"
+	lab.font_size = 38
+	lab.outline_size = 10
+	lab.position = Vector3(0,0,-0.34)
+	lab.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	board.add_child(lab)
+	board.set_meta("kind","farm_upgrade")
+	board.set_meta("farm_id",index)
+	board.add_to_group("interactable")
+	farm_boards.append(board)
+
+	var treadmill := _make_treadmill(center + Vector3(0,0,-5.5), index)
+	if index == 0:
+		player_treadmill = treadmill
 
 func _make_treadmill(pos: Vector3, farm_id: int) -> Node3D:
 	var root:=Node3D.new(); root.position=pos; root.name="Treadmill_%d"%farm_id; add_child(root)
@@ -75,16 +101,61 @@ func _build_treadmill_visual(root: Node3D, level: int) -> void:
 			var sp:=_cylinder(root,Vector3(x*2.0,1.5,-2.6),0.12,2.2,Color(0.1,0.7,1.0)); sp.material_override=_color_mat(Color(0.08,0.45,0.9),Color(0.1,0.6,1.0))
 
 func _build_shops() -> void:
-	_build_shop_building(Vector3(-18,0,154),"TREADMILL LAB","treadmill_shop",Color(0.08,0.52,1.0))
-	_build_shop_building(Vector3(18,0,154),"TRAILS SHOP","trail_shop",Color(0.78,0.2,1.0))
+	_build_trail_shop(Vector3(20,0,160))
+	_build_speed_shop(Vector3(-20,0,160))
 
-func _build_shop_building(pos: Vector3, title: String, kind: String, neon: Color) -> void:
-	var root:=Node3D.new(); root.position=pos; add_child(root); root.set_meta("kind",kind); root.add_to_group("interactable")
-	_static_box(root,Vector3(0,3.2,0),Vector3(13,6.4,8),_color_mat(Color(0.07,0.09,0.12),Color.BLACK,0.35,0.25),false)
-	_static_box(root,Vector3(0,3.8,-4.05),Vector3(9.2,2.0,0.14),_color_mat(neon.darkened(0.6),neon),false)
-	var lab:=Label3D.new(); lab.text=title; lab.font_size=46; lab.outline_size=10; lab.position=Vector3(0,3.8,-4.2); lab.billboard=BaseMaterial3D.BILLBOARD_ENABLED; root.add_child(lab)
-	for x in [-5.7,5.7]:
-		_static_box(root,Vector3(x,3.2,-4.15),Vector3(0.18,5.5,0.16),_color_mat(neon,neon),false)
+func _build_trail_shop(pos: Vector3) -> void:
+	var root := Node3D.new()
+	root.position = pos
+	root.set_meta("kind","trail_shop")
+	root.add_to_group("interactable")
+	root.add_to_group("auto_shop")
+	add_child(root)
+
+	var yellow := Color(1.0,0.86,0.04)
+	var disc := CylinderMesh.new()
+	disc.top_radius = 4.7
+	disc.bottom_radius = 4.7
+	disc.height = 0.12
+	disc.radial_segments = 48
+	var pad := MeshInstance3D.new()
+	pad.mesh = disc
+	pad.position.y = 0.10
+	pad.material_override = _color_mat(yellow,yellow,0.28)
+	root.add_child(pad)
+
+	for x in [-2.7,2.7]:
+		_static_box(root,Vector3(x,2.25,0),Vector3(0.28,4.5,0.28),_color_mat(Color(0.16,0.12,0.08)),false)
+	_static_box(root,Vector3(0,4.55,0),Vector3(6.7,0.36,3.5),_color_mat(Color(1.0,0.94,0.72)),false)
+	for x in [-2.55,-0.85,0.85,2.55]:
+		_static_box(root,Vector3(x,4.74,0),Vector3(1.25,0.13,3.65),_color_mat(yellow),false)
+
+	var sign := Label3D.new()
+	sign.text = "TRAILS SHOP"
+	sign.font_size = 52
+	sign.outline_size = 12
+	sign.position = Vector3(0,5.7,0)
+	sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sign.modulate = yellow
+	root.add_child(sign)
+
+func _build_speed_shop(pos: Vector3) -> void:
+	var root := Node3D.new()
+	root.position = pos
+	root.set_meta("kind","treadmill_shop")
+	root.add_to_group("interactable")
+	add_child(root)
+
+	var cyan := Color(0.10,0.72,1.0)
+	_static_box(root,Vector3(0,1.65,0),Vector3(7.5,3.3,4.2),_color_mat(Color(0.08,0.10,0.13)),false)
+	_static_box(root,Vector3(0,3.45,-2.15),Vector3(7.8,1.25,0.24),_color_mat(Color(0.05,0.22,0.36),cyan),false)
+	var lab := Label3D.new()
+	lab.text = "TREADMILL\nUPGRADES"
+	lab.font_size = 38
+	lab.outline_size = 10
+	lab.position = Vector3(0,3.5,-2.35)
+	lab.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	root.add_child(lab)
 
 func _spawn_player() -> void:
 	player=CharacterBody3D.new(); player.name="Player"; player.set_script(PlayerScript); player.position=Vector3(0,1.0,143); add_child(player)
