@@ -4,14 +4,19 @@ const PlayerScript = preload("res://scripts/player.gd")
 const GuardianScript = preload("res://scripts/guardian.gd")
 
 const BIOMES = [
-	{"name":"FOREST", "guardian":"Chicken", "tex":"grass", "color":Color(0.396,0.784,0.365), "speed":900.0, "gspd":10.8},
-	{"name":"LAKE", "guardian":"Swan", "tex":"water", "color":Color(0.275,0.663,0.812), "speed":10000.0, "gspd":12.2},
-	{"name":"DESERT", "guardian":"Scorpion", "tex":"sand", "color":Color(0.875,0.725,0.424), "speed":40000.0, "gspd":13.6},
-	{"name":"JUNGLE", "guardian":"Tiger", "tex":"jungle", "color":Color(0.243,0.624,0.329), "speed":170000.0, "gspd":15.2},
-	{"name":"SNOW", "guardian":"Yeti", "tex":"snow", "color":Color(0.843,0.929,0.961), "speed":700000.0, "gspd":16.6},
-	{"name":"VOLCANO", "guardian":"Cerberus", "tex":"lava", "color":Color(0.353,0.141,0.125), "speed":2500000.0, "gspd":18.4},
-	{"name":"ABYSS", "guardian":"Moby", "tex":"water", "color":Color(0.129,0.294,0.471), "speed":17000000.0, "gspd":20.3},
-	{"name":"PREHISTORIC", "guardian":"TRex", "tex":"grass_dark", "color":Color(0.251,0.490,0.227), "speed":85000000.0, "gspd":22.5}
+	{"name":"FOREST", "guardian":"Chicken", "tex":"grass", "color":Color(0.36,0.92,0.12), "speed":0.0, "gspd":10.8},
+	{"name":"LAKE", "guardian":"Swan", "tex":"lake", "color":Color(0.18,0.72,0.95), "speed":900.0, "gspd":12.2},
+	{"name":"DESERT", "guardian":"Scorpion", "tex":"sand", "color":Color(0.93,0.78,0.36), "speed":10000.0, "gspd":13.8},
+	{"name":"JUNGLE", "guardian":"Tiger", "tex":"jungle", "color":Color(0.16,0.72,0.20), "speed":40000.0, "gspd":15.5},
+	{"name":"SNOW", "guardian":"Yeti", "tex":"snow", "color":Color(0.88,0.96,1.0), "speed":170000.0, "gspd":17.2},
+	{"name":"VOLCANO", "guardian":"Cerberus", "tex":"lava", "color":Color(0.42,0.11,0.06), "speed":700000.0, "gspd":19.0},
+	{"name":"ABYSS OCEAN", "guardian":"Moby", "tex":"abyss", "color":Color(0.08,0.28,0.62), "speed":2500000.0, "gspd":21.0},
+	{"name":"PREHISTORIC", "guardian":"TRex", "tex":"grass_dark", "color":Color(0.28,0.57,0.18), "speed":18000000.0, "gspd":23.0},
+	{"name":"COSMIC", "guardian":"CosmicSkeleton", "tex":"cosmic", "color":Color(0.22,0.08,0.48), "speed":700000000.0, "gspd":25.0},
+	{"name":"CHERRY BLOSSOM", "guardian":"OniTiger", "tex":"sakura", "color":Color(1.0,0.55,0.76), "speed":2500000000.0, "gspd":27.0},
+	{"name":"TITAN TEMPLE", "guardian":"GorillaKing", "tex":"temple", "color":Color(0.66,0.58,0.36), "speed":7000000000.0, "gspd":29.0},
+	{"name":"ANGELS & DEMONS", "guardian":"ArchGuardian", "tex":"heaven", "color":Color(0.78,0.84,0.98), "speed":20000000000.0, "gspd":31.0},
+	{"name":"ENCHANTED FOREST", "guardian":"Sunlion", "tex":"enchanted", "color":Color(0.24,0.78,0.44), "speed":50000000000.0, "gspd":33.0}
 ]
 
 const FARM_PRICES = [25000.0, 150000.0, 900000.0, 5000000.0, 30000000.0, 180000000.0, 1100000000.0, 7500000000.0, 52000000000.0, 380000000000.0, 2900000000000.0, 22000000000000.0]
@@ -106,24 +111,43 @@ func _setup_environment() -> void:
 	fill.light_color = Color(0.35,0.55,1.0)
 	add_child(fill)
 
-func _material(tex_name: String, tint := Color.WHITE, emission := Color.BLACK) -> StandardMaterial3D:
-	# Web-friendly procedural material: no external texture downloads required.
+func _stud_material(base: Color, inset: Color, scale_v: float = 34.0) -> ShaderMaterial:
+	var sh := Shader.new()
+	sh.code = "shader_type spatial; uniform vec4 base_color : source_color; uniform vec4 stud_color : source_color; uniform float tiles = 34.0; void fragment(){ vec2 q=fract(UV*tiles); vec2 d=abs(q-vec2(0.5)); float sq=1.0-smoothstep(0.30,0.38,max(d.x,d.y)); float rim=smoothstep(0.24,0.31,max(d.x,d.y))-smoothstep(0.32,0.39,max(d.x,d.y)); ALBEDO=mix(base_color.rgb,stud_color.rgb,sq*0.30+rim*0.40); ROUGHNESS=0.72; }"
+	var m := ShaderMaterial.new()
+	m.shader = sh
+	m.set_shader_parameter("base_color", base)
+	m.set_shader_parameter("stud_color", inset)
+	m.set_shader_parameter("tiles", scale_v)
+	return m
+
+func _checker_material(a: Color, b: Color, tiles_x: float = 28.0, tiles_y: float = 12.0) -> ShaderMaterial:
+	var sh := Shader.new()
+	sh.code = "shader_type spatial; uniform vec4 c1 : source_color; uniform vec4 c2 : source_color; uniform vec2 tiles=vec2(28.0,12.0); void fragment(){ vec2 p=floor(UV*tiles); float t=mod(p.x+p.y,2.0); ALBEDO=mix(c1.rgb,c2.rgb,t); ROUGHNESS=0.82; }"
+	var m := ShaderMaterial.new()
+	m.shader = sh
+	m.set_shader_parameter("c1", a); m.set_shader_parameter("c2", b); m.set_shader_parameter("tiles", Vector2(tiles_x,tiles_y))
+	return m
+
+func _material(tex_name: String, tint := Color.WHITE, emission := Color.BLACK) -> Material:
 	var palette := {
-		"grass": Color(0.38,0.74,0.31), "grass_dark": Color(0.20,0.43,0.17),
-		"water": Color(0.10,0.42,0.72), "sand": Color(0.82,0.67,0.38),
-		"jungle": Color(0.14,0.48,0.20), "snow": Color(0.88,0.94,0.98),
-		"lava": Color(0.28,0.07,0.035), "brick": Color(0.50,0.31,0.23),
-		"stone": Color(0.35,0.38,0.42), "ice": Color(0.48,0.78,0.94)
+		"grass": Color(0.30,0.92,0.10), "grass_dark": Color(0.16,0.47,0.12),
+		"lake": Color(0.18,0.69,0.92), "abyss": Color(0.08,0.25,0.55),
+		"sand": Color(0.87,0.70,0.34), "jungle": Color(0.13,0.60,0.17),
+		"snow": Color(0.84,0.94,0.98), "lava": Color(0.31,0.055,0.025),
+		"stone": Color(0.37,0.40,0.43), "cosmic":Color(0.17,0.055,0.36),
+		"sakura":Color(0.82,0.46,0.61), "temple":Color(0.58,0.48,0.28),
+		"heaven":Color(0.68,0.76,0.92), "enchanted":Color(0.15,0.61,0.31)
 	}
+	var base: Color = palette.get(tex_name, Color(0.55,0.58,0.58)) * tint
+	if tex_name in ["grass","grass_dark","jungle","snow","sand","sakura","enchanted","temple","heaven"]:
+		return _stud_material(base, base.lightened(0.14), 38.0)
 	var m := StandardMaterial3D.new()
-	var base: Color = palette.get(tex_name, Color(0.55,0.58,0.58))
-	m.albedo_color = base * tint
-	m.roughness = 0.70
-	m.metallic = 0.02
-	if tex_name in ["water", "ice"]:
-		m.roughness = 0.28; m.metallic = 0.08
-	if tex_name == "lava":
-		m.emission_enabled = true; m.emission = Color(1.0,0.18,0.02); m.emission_energy_multiplier = 1.5
+	m.albedo_color = base; m.roughness = 0.62
+	if tex_name in ["lake","abyss"]:
+		m.metallic = 0.12; m.roughness = 0.24
+	if tex_name in ["lava","cosmic"]:
+		m.emission_enabled = true; m.emission = base.lightened(0.25); m.emission_energy_multiplier = 0.65
 	if emission != Color.BLACK:
 		m.emission_enabled = true; m.emission = emission; m.emission_energy_multiplier = 2.0
 	return m
