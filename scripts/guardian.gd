@@ -40,9 +40,9 @@ func _tone_stream(freq: float, duration: float, volume: float) -> AudioStreamWAV
 	var count := int(rate * duration)
 	var bytes := PackedByteArray(); bytes.resize(count * 2)
 	for i in range(count):
-		var t := float(i) / float(rate)
-		var env := 1.0 - float(i) / max(1.0, float(count))
-		var wobble := 1.0 + 0.08 * sin(TAU * 7.0 * t)
+		var t: float = float(i) / float(rate)
+		var env: float = 1.0 - float(i) / maxf(1.0, float(count))
+		var wobble: float = 1.0 + 0.08 * sin(TAU * 7.0 * t)
 		var sample := int(sin(TAU * freq * wobble * t) * 32767.0 * volume * env)
 		bytes[i*2] = sample & 255; bytes[i*2+1] = (sample >> 8) & 255
 	var wav := AudioStreamWAV.new(); wav.format = AudioStreamWAV.FORMAT_16_BITS; wav.mix_rate = rate; wav.stereo = false; wav.data = bytes
