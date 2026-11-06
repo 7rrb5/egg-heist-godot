@@ -24,13 +24,13 @@ func _build_outer_walls(start_z: float, seg_len: float) -> void:
 	var end_z := start_z - BIOMES.size()*seg_len
 	var center_z := (170.0 + end_z) * 0.5
 	var total_len := 170.0 - end_z + 20.0
-	var brick := _material("brick", Color(0.9,0.72,0.62))
+	var brick: Material = _checker_material(Color(0.58,0.39,0.28),Color(0.67,0.47,0.34),34.0,14.0)
 	for side in [-1,1]:
-		_static_box(self, Vector3(side*75,12.0,center_z), Vector3(5,24,total_len), brick)
-		_static_box(self, Vector3(side*72.2,24.7,center_z), Vector3(1.2,1.4,total_len), _color_mat(Color(0.18,0.95,0.24),Color(0.08,0.7,0.16)), false)
+		_static_box(self, Vector3(side*75,13.0,center_z), Vector3(5,26,total_len), brick)
+		_static_box(self, Vector3(side*72.25,26.25,center_z), Vector3(1.25,1.7,total_len), _color_mat(Color(0.22,1.0,0.12),Color(0.12,0.78,0.05)), false)
 	# End caps
-	_static_box(self, Vector3(0,12,180), Vector3(154,24,5), brick)
-	_static_box(self, Vector3(0,12,end_z-8), Vector3(154,24,5), brick)
+	_static_box(self, Vector3(0,13,180), Vector3(154,26,5), brick)
+	_static_box(self, Vector3(0,13,end_z-8), Vector3(154,26,5), brick)
 	# Structural buttresses make the walls read as a designed arena rather than a flat box.
 	var z := 170.0
 	while z > end_z:
@@ -41,8 +41,10 @@ func _build_outer_walls(start_z: float, seg_len: float) -> void:
 func _build_biome_props(index: int, zc: float, seg_len: float) -> void:
 	var rng := RandomNumberGenerator.new(); rng.seed = 8300 + index*97
 	var name: String = BIOMES[index].name
-	# Big gateway name marker.
-	var label := Label3D.new(); label.text = name; label.font_size=96; label.outline_size=20; label.position=Vector3(0,6.5,zc+seg_len*0.5-11); label.billboard=BaseMaterial3D.BILLBOARD_ENABLED; add_child(label)
+	# Low zone title board like the reference track rather than a giant floating title.
+	var gate := Node3D.new(); gate.position=Vector3(-49,0.0,zc+seg_len*0.5-10); add_child(gate)
+	_static_box(gate,Vector3(0,2.0,0),Vector3(17,4.0,0.6),_color_mat(Color(0.19,0.12,0.07)),false)
+	var label := Label3D.new(); label.text = name; label.font_size=56; label.outline_size=12; label.position=Vector3(0,2.15,-0.36); label.billboard=BaseMaterial3D.BILLBOARD_ENABLED; label.modulate=Color(1.0,0.92,0.55); gate.add_child(label)
 	for k in range(30):
 		var x := rng.randf_range(-61,61); var z := rng.randf_range(zc-seg_len*0.42,zc+seg_len*0.42)
 		if abs(x) < 18 and rng.randf() < 0.72: x += 26.0 * (1 if x>=0 else -1)
@@ -65,6 +67,20 @@ func _build_biome_props(index: int, zc: float, seg_len: float) -> void:
 			7:
 				if k%3==0: _fern(Vector3(x,0,z),rng.randf_range(0.9,1.6))
 				else: _rock(Vector3(x,0,z),Color(0.26,0.33,0.21),rng.randf_range(1.0,2.4))
+			8:
+				_abyss_crystal(Vector3(x,0,z),rng.randf_range(0.7,1.4))
+			9:
+				if k%2==0: _sakura_tree(Vector3(x,0,z),rng.randf_range(0.8,1.35))
+				else: _rock(Vector3(x,0,z),Color(0.62,0.38,0.48),rng.randf_range(0.7,1.5))
+			10:
+				if k%3==0: _temple_pillar(Vector3(x,0,z),rng.randf_range(0.85,1.25))
+				else: _rock(Vector3(x,0,z),Color(0.48,0.43,0.31),rng.randf_range(1.0,2.0))
+			11:
+				if k%2==0: _light_spire(Vector3(x,0,z),rng.randf_range(0.8,1.3),Color(0.95,0.85,0.35))
+				else: _light_spire(Vector3(x,0,z),rng.randf_range(0.8,1.3),Color(0.65,0.18,0.16))
+			12:
+				if k%2==0: _enchanted_tree(Vector3(x,0,z),rng.randf_range(0.9,1.45))
+				else: _light_spire(Vector3(x,0,z),rng.randf_range(0.65,1.0),Color(0.2,1.0,0.6))
 
 func _tree(p: Vector3, s: float) -> void:
 	_cylinder(self,p+Vector3(0,2.4*s,0),0.55*s,4.8*s,Color(0.35,0.19,0.08))
@@ -104,7 +120,24 @@ func _abyss_crystal(p: Vector3, s: float) -> void:
 
 func _fern(p: Vector3, s: float) -> void:
 	for i in range(6):
-		var a:=i*TAU/6.0; var leaf:=_sphere(self,p+Vector3(cos(a)*0.8*s,0.55*s,sin(a)*0.8*s),Vector3(1.2,0.18,0.42)*s,Color(0.16,0.5,0.18)); leaf.rotation.y=-a
+		var a: float=float(i)*TAU/6.0; var leaf:=_sphere(self,p+Vector3(cos(a)*0.8*s,0.55*s,sin(a)*0.8*s),Vector3(1.2,0.18,0.42)*s,Color(0.16,0.5,0.18)); leaf.rotation.y=-a
+
+func _sakura_tree(p: Vector3, s: float) -> void:
+	_cylinder(self,p+Vector3(0,2.6*s,0),0.48*s,5.2*s,Color(0.29,0.16,0.12))
+	for off in [Vector3(-1.5,5.6,0),Vector3(1.4,6.1,0),Vector3(0,6.8,1.1)]:
+		_sphere(self,p+off*s,Vector3(2.0,1.35,1.8)*s,Color(1.0,0.48,0.74),Color(0.26,0.04,0.16))
+
+func _temple_pillar(p: Vector3, s: float) -> void:
+	_static_box(self,p+Vector3(0,2.7*s,0),Vector3(1.4,5.4,1.4)*s,_color_mat(Color(0.66,0.57,0.36)),false)
+	_static_box(self,p+Vector3(0,5.7*s,0),Vector3(2.0,0.5,2.0)*s,_color_mat(Color(0.77,0.67,0.42)),false)
+
+func _light_spire(p: Vector3, s: float, c: Color) -> void:
+	var n:=_cylinder(self,p+Vector3(0,2.1*s,0),0.26*s,4.2*s,c); n.material_override=_color_mat(c,c)
+
+func _enchanted_tree(p: Vector3, s: float) -> void:
+	_cylinder(self,p+Vector3(0,2.7*s,0),0.52*s,5.4*s,Color(0.22,0.13,0.2))
+	for off in [Vector3(-1.4,5.7,0),Vector3(1.4,6.0,0),Vector3(0,6.8,1.0)]:
+		_sphere(self,p+off*s,Vector3(1.9,1.45,1.9)*s,Color(0.15,0.72,0.39),Color(0.08,0.55,0.28))
 
 func _spawn_guardian_and_eggs(index: int, zc: float) -> void:
 	var info = BIOMES[index]
