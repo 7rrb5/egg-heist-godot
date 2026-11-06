@@ -21,12 +21,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Unpack Godot project
-        run: |
-          rm -rf build-project
-          mkdir -p build-project
-          unzip -q egg-heist-godot-v1.zip -d build-project
-          echo "PROJECT_DIR=$(find build-project -name project.godot -printf '%h\n' | head -n 1)" >> "$GITHUB_ENV"
+      - name: Assemble main game script
+        run: cat scripts/game.part00 scripts/game.part01 scripts/game.part02 scripts/game.part03 scripts/game.part04 > scripts/game.gd
 
       - name: Setup Godot 4.7.2
         uses: chickensoft-games/setup-godot@v2
@@ -36,12 +32,12 @@ jobs:
           include-templates: true
 
       - name: Import project
-        run: godot --headless --path "$PROJECT_DIR" --import --quit
+        run: godot --headless --path . --import --quit
 
       - name: Export Web
         run: |
-          mkdir -p "$PROJECT_DIR/web"
-          godot --headless --path "$PROJECT_DIR" --export-release Web "$PROJECT_DIR/web/index.html"
+          mkdir -p web
+          godot --headless --path . --export-release Web web/index.html
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -49,7 +45,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ env.PROJECT_DIR }}/web
+          path: web
 
   deploy:
     environment:
