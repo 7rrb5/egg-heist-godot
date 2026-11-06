@@ -1,0 +1,126 @@
+me*991+9
+	var root:=Node3D.new(); var c:Color=BIOMES[biome].color.lightened(0.12)
+	root.position=farm_centers[0]+Vector3(rng.randf_range(-12,12),0.55,rng.randf_range(-7.5,7.5)); pets_root.add_child(root)
+	_sphere(root,Vector3(0,1.1,0),Vector3(1.3,1.15,1.5),c)
+	_sphere(root,Vector3(0,2.25,-0.75),Vector3(0.85,0.8,0.85),c.lightened(0.08))
+	for x in [-0.28,0.28]: _sphere(root,Vector3(x,2.45,-1.45),Vector3(0.09,0.1,0.06),Color(0.05,0.05,0.06))
+	var label:=Label3D.new(); label.text="+%s/s"%_fmt(income); label.font_size=34; label.outline_size=8; label.modulate=Color(0.2,1.0,0.32); label.position=Vector3(0,3.4,0); label.billboard=BaseMaterial3D.BILLBOARD_ENABLED; root.add_child(label)
+	pet_nodes.append(root); pet_income+=income
+	if persist:
+		var arr:Array=Save.data.pets; arr.append({"biome":biome,"income":income}); Save.data.pets=arr; Save.save_data()
+
+func try_interact(p: CharacterBody3D) -> void:
+	var best:Node3D=null; var best_d:=8.0
+	for n in get_tree().get_nodes_in_group("interactable"):
+		if not is_instance_valid(n): continue
+		var d:float=p.global_position.distance_to(n.global_position)
+		if d<best_d: best=n; best_d=d
+	if best==null: return
+	var kind:String=str(best.get_meta("kind",""))
+	match kind:
+		"egg": _pick_egg(p,best)
+		"treadmill": _toggle_treadmill(p,best)
+		"farm_upgrade": _upgrade_farm(int(best.get_meta("farm_id",-1)))
+		"trail_shop": _open_shop("trail")
+		"treadmill_shop": _open_shop("treadmill")
+
+func _pick_egg(p: CharacterBody3D, egg: Node3D) -> void:
+	if p.carrying_egg: _toast("You are already carrying an egg"); return
+	egg.remove_from_group("interactable")
+	p.set_carrying(egg)
+	_play_one_shot(p,"res://assets/audio/egg_pick.wav")
+	var g=egg.get_meta("guardian")
+	if is_instance_valid(g): g.wake_up(p)
+	_toast("EGG STOLEN! RUN TO YOUR FARM")
+
+func check_farm_delivery(p: CharacterBody3D) -> void:
+	if not p.carrying_egg: return
+	if p.global_position.distance_to(farm_centers[0])>15.5: return
+	if pet_nodes.size()>=Save.farm_capacity():
+		_toast("Farm full — upgrade the board outside your pen")
+		return
+	var egg:=p.carrying_egg; p.carrying_egg=null
+	var biome:=int(egg.get_meta("biome",0)); var income:=float(egg.get_meta("income",100.0)); var g=egg.get_meta("guardian")
+	if is_instance_valid(g): g.calm_down()
+	egg.queue_free(); _spawn_pet(biome,income,true); _toast("New animal added to your farm  +%s/s"%_fmt(income))
+
+func on_player_hit(p: CharacterBody3D) -> void:
+	if p.carrying_egg:
+		var e:=p.carrying_egg; p.drop_egg(p.global_position+Vector3(0,0,1.8)); e.add_to_group("interactable")
+	_toast("The guardian caught you — egg dropped")
+	# Camera punch through temporary pivot tilt.
+	var tw:=create_tween(); tw.tween_property(p.pitch_pivot,"rotation:x",p.pitch_pivot.rotation.x+0.12,0.06); tw.tween_property(p.pitch_pivot,"rotation:x",p.pitch_pivot.rotation.x-0.12,0.16)
+
+func _toggle_treadmill(p: CharacterBody3D, treadmill: Node3D) -> void:
+	if int(treadmill.get_meta("farm_id",-1))!=0: _toast("This treadmill belongs to another farm"); return
+	if p.training: p.stop_training(); _toast("Training stopped"); return
+	var marker=treadmill.get_node_or_null("RunMarker")
+	if marker:
+		p.start_training(marker.global_transform); _toast("Training… Speed increases every second. Press E again to stop")
+
+func _upgrade_farm(id: int) -> void:
+	if id!=0: _toast("This is another player's farm"); return
+	var lvl:=int(Save.data.farm_level)
+	if lvl>=13: _toast("Farm is already MAX Lv.13"); return
+	var price:=FARM_PRICES[lvl-1]
+	if not Save.spend(price): _toast("Need %s cash"%_fmt(price)); return
+	Save.data.farm_level=lvl+1; Save.save_data(); _play_one_shot(player,"res://assets/audio/upgrade.wav"); _update_farm_board(); _toast("Farm upgraded to Lv.%d • capacity %d"%[lvl+1,Save.farm_capacity()])
+
+func _update_farm_board() -> void:
+	for i in range(farm_boards.size()):
+		var lab=farm_boards[i].get_node_or_null("FarmLabel")
+		if not lab: continue
+		if i==0:
+			var lvl:=int(Save.data.farm_level); var price_text:="MAX" if lvl>=13 else _fmt(FARM_PRICES[lvl-1])
+			lab.text="YOUR FARM  Lv.%d / 13
+Animals %d / %d
+[E] Upgrade  %s"%[lvl,pet_nodes.size(),Save.farm_capacity(),price_text]
+			lab.modulate=Color(0.35,1.0,0.45)
+		else:
+			lab.text="FARM %02d
+ONLINE SLOT"%(i+1); lab.modulate=Color(0.72,0.78,0.72)
+
+func _open_shop(kind: String) -> void:
+	current_shop=kind; shop_panel.visible=true; _refresh_shop_ui()
+
+func _refresh_shop_ui() -> void:
+	if current_shop=="trail":
+		var lvl:=int(Save.data.trail_level); var cur=TRAILS[lvl]
+		shop_title.text="TRAILS SHOP"
+		if lvl>=TRAILS.size()-1:
+			shop_info.text="%s equipped
+MAX TRAIL"%cur.name; shop_buy.text="MAX"; shop_buy.disabled=true
+		else:
+			var nxt=TRAILS[lvl+1]; shop_info.text="Current: %s
+Next: %s
+Permanent movement bonus +8%% per level
+Price: %s"%[cur.name,nxt.name,_fmt(nxt.price)]; shop_buy.text="BUY %s"%nxt.name; shop_buy.disabled=false
+	else:
+		var lvl2:=int(Save.data.treadmill_level); shop_title.text="TREADMILL LAB"
+		if lvl2>=8:
+			shop_info.text="Treadmill Lv.8
+MAX LEVEL • strongest blue energy effects"; shop_buy.text="MAX"; shop_buy.disabled=true
+		else:
+			var price:=TREADMILL_PRICES[lvl2-1]; shop_info.text="Treadmill Lv.%d → Lv.%d
+Training income increases heavily
+Visual model and blue effects upgrade every level
+Price: %s"%[lvl2,lvl2+1,_fmt(price)]; shop_buy.text="UPGRADE"; shop_buy.disabled=false
+
+func _buy_shop() -> void:
+	if current_shop=="trail":
+		var lvl:=int(Save.data.trail_level); if lvl>=TRAILS.size()-1: return
+		var price:=float(TRAILS[lvl+1].price)
+		if not Save.spend(price): _toast("Not enough cash"); return
+		Save.data.trail_level=lvl+1; Save.save_data(); player.refresh_trail(); _play_one_shot(player,"res://assets/audio/buy.wav")
+	else:
+		var lvl2:=int(Save.data.treadmill_level); if lvl2>=8: return
+		var price2:=TREADMILL_PRICES[lvl2-1]
+		if not Save.spend(price2): _toast("Not enough cash"); return
+		Save.data.treadmill_level=lvl2+1; Save.save_data(); _build_treadmill_visual(player_treadmill,lvl2+1); _play_one_shot(player,"res://assets/audio/upgrade.wav")
+	_refresh_shop_ui()
+
+func _build_hud() -> void:
+	hud_layer=CanvasLayer.new(); add_child(hud_layer)
+	var stats:=PanelContainer.new(); stats.position=Vector2(18,16); stats.size=Vector2(300,122); hud_layer.add_child(stats)
+	var vb:=VBoxContainer.new(); vb.add_theme_constant_override("separation",2); stats.add_child(vb)
+	cash_label=Label.new(); speed_label=Label.new(); farm_label=Label.new(); vb.add_child(cash_label); vb.add_child(speed_label); vb.add_child(farm_label)
