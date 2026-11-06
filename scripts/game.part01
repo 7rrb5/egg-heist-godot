@@ -1,0 +1,118 @@
+RO) -> MeshInstance3D:
+	var cm := CylinderMesh.new(); cm.top_radius=radius; cm.bottom_radius=radius; cm.height=height; cm.radial_segments=12
+	var n:=MeshInstance3D.new(); n.mesh=cm; n.position=pos; n.rotation=rot; n.material_override=_color_mat(c); parent.add_child(n); return n
+
+func _build_world() -> void:
+	# Safe zone, then one continuous 8-biome corridor. No disconnected islands.
+	_static_box(self, Vector3(0,-0.55,105), Vector3(144,1.0,170), _material("grass", Color(0.92,1.0,0.92)))
+	var start_z := -25.0
+	var seg_len := 155.0
+	for i in range(BIOMES.size()):
+		var b = BIOMES[i]
+		var z := start_z - i * seg_len - seg_len * 0.5
+		var floor_mat := _material(b.tex, Color.WHITE)
+		_static_box(self, Vector3(0,-0.55,z), Vector3(144,1.0,seg_len+2), floor_mat)
+		# Slightly raised transition band keeps biomes visibly connected rather than separated.
+		if i > 0:
+			_static_box(self, Vector3(0,0.03,z+seg_len*0.5), Vector3(144,0.08,12), _color_mat(Color(1,1,1,0.11)), false)
+		_build_biome_props(i, z, seg_len)
+		_spawn_guardian_and_eggs(i, z)
+	_build_outer_walls(start_z, seg_len)
+	_build_safe_zone_details()
+
+func _build_outer_walls(start_z: float, seg_len: float) -> void:
+	var end_z := start_z - BIOMES.size()*seg_len
+	var center_z := (170.0 + end_z) * 0.5
+	var total_len := 170.0 - end_z + 20.0
+	var brick := _material("brick", Color(0.9,0.72,0.62))
+	for side in [-1,1]:
+		_static_box(self, Vector3(side*75,12.0,center_z), Vector3(5,24,total_len), brick)
+		_static_box(self, Vector3(side*72.2,24.7,center_z), Vector3(1.2,1.4,total_len), _color_mat(Color(0.18,0.95,0.24),Color(0.08,0.7,0.16)), false)
+	# End caps
+	_static_box(self, Vector3(0,12,180), Vector3(154,24,5), brick)
+	_static_box(self, Vector3(0,12,end_z-8), Vector3(154,24,5), brick)
+	# Structural buttresses make the walls read as a designed arena rather than a flat box.
+	var z := 170.0
+	while z > end_z:
+		for side in [-1,1]:
+			_static_box(self, Vector3(side*71.8,9,z), Vector3(7,18,3.2), _color_mat(Color(0.35,0.29,0.27)), false)
+		z -= 38.0
+
+func _build_biome_props(index: int, zc: float, seg_len: float) -> void:
+	var rng := RandomNumberGenerator.new(); rng.seed = 8300 + index*97
+	var name: String = BIOMES[index].name
+	# Big gateway name marker.
+	var label := Label3D.new(); label.text = name; label.font_size=96; label.outline_size=20; label.position=Vector3(0,6.5,zc+seg_len*0.5-11); label.billboard=BaseMaterial3D.BILLBOARD_ENABLED; add_child(label)
+	for k in range(30):
+		var x := rng.randf_range(-61,61); var z := rng.randf_range(zc-seg_len*0.42,zc+seg_len*0.42)
+		if abs(x) < 18 and rng.randf() < 0.72: x += 26.0 * (1 if x>=0 else -1)
+		match index:
+			0: _tree(Vector3(x,0,z), rng.randf_range(0.8,1.45))
+			1:
+				if k < 12: _rock(Vector3(x,0,z), Color(0.42,0.62,0.7), rng.randf_range(1.1,2.2))
+				else: _reed(Vector3(x,0,z))
+			2:
+				if k%3==0: _cactus(Vector3(x,0,z),rng.randf_range(0.8,1.4))
+				else: _rock(Vector3(x,0,z),Color(0.55,0.36,0.2),rng.randf_range(0.8,1.8))
+			3: _jungle_tree(Vector3(x,0,z),rng.randf_range(0.85,1.4))
+			4:
+				if k%2==0: _snow_pine(Vector3(x,0,z),rng.randf_range(0.85,1.4))
+				else: _rock(Vector3(x,0,z),Color(0.7,0.83,0.9),rng.randf_range(0.8,1.8))
+			5:
+				_rock(Vector3(x,0,z),Color(0.18,0.14,0.14),rng.randf_range(1.0,2.2))
+				if k%6==0: _lava_spire(Vector3(x,0,z))
+			6: _abyss_crystal(Vector3(x,0,z),rng.randf_range(0.8,1.4))
+			7:
+				if k%3==0: _fern(Vector3(x,0,z),rng.randf_range(0.9,1.6))
+				else: _rock(Vector3(x,0,z),Color(0.26,0.33,0.21),rng.randf_range(1.0,2.4))
+
+func _tree(p: Vector3, s: float) -> void:
+	_cylinder(self,p+Vector3(0,2.4*s,0),0.55*s,4.8*s,Color(0.35,0.19,0.08))
+	_sphere(self,p+Vector3(0,6.1*s,0),Vector3(2.6,2.3,2.6)*s,Color(0.18,0.58,0.2))
+	_sphere(self,p+Vector3(1.5*s,5.5*s,0),Vector3(1.8,1.5,1.8)*s,Color(0.23,0.68,0.24))
+
+func _jungle_tree(p: Vector3, s: float) -> void:
+	_tree(p,s*1.15)
+	for a in range(4):
+		var ang := a*PI*0.5
+		var leaf := _sphere(self,p+Vector3(cos(ang)*3.2*s,6.6*s,sin(ang)*3.2*s),Vector3(2.4,0.55,0.9)*s,Color(0.1,0.52,0.18)); leaf.rotation.y=-ang
+
+func _snow_pine(p: Vector3, s: float) -> void:
+	_cylinder(self,p+Vector3(0,2*s,0),0.45*s,4*s,Color(0.28,0.18,0.1))
+	for y in [3.0,4.7,6.2]:
+		var cone := CylinderMesh.new(); cone.top_radius=0; cone.bottom_radius=(7.2-y)*0.72*s; cone.height=2.4*s; cone.radial_segments=10
+		var n:=MeshInstance3D.new(); n.mesh=cone; n.position=p+Vector3(0,y*s,0); n.material_override=_color_mat(Color(0.15,0.42,0.3)); add_child(n)
+		_sphere(self,p+Vector3(0,y*s+0.4,0),Vector3(2.0,0.25,2.0)*s,Color(0.9,0.97,1.0))
+
+func _cactus(p: Vector3, s: float) -> void:
+	_cylinder(self,p+Vector3(0,2.4*s,0),0.58*s,4.8*s,Color(0.19,0.55,0.27))
+	for side in [-1,1]:
+		var arm:=_cylinder(self,p+Vector3(side*1.0*s,2.8*s,0),0.35*s,2.2*s,Color(0.19,0.55,0.27),Vector3(0,0,PI/2)); arm.rotation.z=PI/2
+
+func _rock(p: Vector3, c: Color, s: float) -> void:
+	var n:=_sphere(self,p+Vector3(0,0.8*s,0),Vector3(1.3,0.85,1.1)*s,c); n.rotation=Vector3(0.2,s*0.3,0.12)
+
+func _reed(p: Vector3) -> void:
+	for i in range(3): _cylinder(self,p+Vector3((i-1)*0.35,1.1+i*0.15,0),0.08,2.2+i*0.3,Color(0.15,0.5,0.25))
+
+func _lava_spire(p: Vector3) -> void:
+	var n:=_cylinder(self,p+Vector3(0,2.5,0),0.7,5.0,Color(0.2,0.15,0.16)); n.material_override=_color_mat(Color(0.2,0.12,0.1),Color(1,0.12,0.02))
+
+func _abyss_crystal(p: Vector3, s: float) -> void:
+	for i in range(3):
+		var n:=_cylinder(self,p+Vector3((i-1)*0.8*s,(1.6+i*0.6)*s,0),0.38*s,(3.2+i*1.2)*s,Color(0.15,0.48,0.75)); n.material_override=_color_mat(Color(0.12,0.38,0.7),Color(0.08,0.45,1.0))
+
+func _fern(p: Vector3, s: float) -> void:
+	for i in range(6):
+		var a:=i*TAU/6.0; var leaf:=_sphere(self,p+Vector3(cos(a)*0.8*s,0.55*s,sin(a)*0.8*s),Vector3(1.2,0.18,0.42)*s,Color(0.16,0.5,0.18)); leaf.rotation.y=-a
+
+func _spawn_guardian_and_eggs(index: int, zc: float) -> void:
+	var info = BIOMES[index]
+	var g := CharacterBody3D.new(); g.set_script(GuardianScript); g.guardian_type=info.guardian; g.base_speed=info.gspd; g.scale_factor=1.08 if index<4 else 1.18; g.position=Vector3(0,0.2,zc-14); add_child(g); guardians.append(g)
+	var sign := Label3D.new(); sign.text = "%s
+%s recommended" % [info.guardian, _fmt(info.speed)]; sign.font_size=54; sign.outline_size=12; sign.position=Vector3(-22,3.2,zc+22); sign.billboard=BaseMaterial3D.BILLBOARD_ENABLED; sign.modulate=Color(1,0.86,0.2); add_child(sign)
+	for e in range(5):
+		var ang:=e*TAU/5.0; var pos:=Vector3(cos(ang)*7.5,0.85,zc-2+sin(ang)*6.5)
+		_spawn_egg(index,pos,g,e)
+
+func _spawn_egg(index: int, pos 
