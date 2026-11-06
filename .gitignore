@@ -1,0 +1,7 @@
+.godot/
+web/*.pck
+web/*.wasm
+web/*.js
+web/*.html
+web/*.png
+web/*.ico
