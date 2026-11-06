@@ -50,6 +50,20 @@ func _update_hud() -> void:
 	speed_label.text="SPEED  %s"%_fmt(float(Save.data.speed))
 	farm_label.text="FARM   Lv.%d / 13   •   %d/%d animals"%[int(Save.data.farm_level),pet_nodes.size(),Save.farm_capacity()]
 
+func _check_auto_shops() -> void:
+	if player == null or shop_panel == null:
+		return
+	var inside := false
+	for n in get_tree().get_nodes_in_group("auto_shop"):
+		if not is_instance_valid(n):
+			continue
+		if player.global_position.distance_to(n.global_position) <= 5.2:
+			inside = true
+			if not auto_shop_inside and not shop_panel.visible:
+				_open_shop("trail")
+			break
+	auto_shop_inside = inside
+
 func _update_prompt() -> void:
 	if not player or not prompt_label: return
 	var best:Node3D=null; var d0:=8.0
@@ -62,7 +76,7 @@ func _update_prompt() -> void:
 		"egg": prompt_label.text="[E] STEAL EGG"
 		"treadmill": prompt_label.text="[E] TRAIN / STOP"
 		"farm_upgrade": prompt_label.text="[E] FARM UPGRADE"
-		"trail_shop": prompt_label.text="[E] OPEN TRAILS SHOP"
+		"trail_shop": prompt_label.text="TRAILS SHOP  •  WALK INTO THE YELLOW CIRCLE"
 		"treadmill_shop": prompt_label.text="[E] OPEN TREADMILL LAB"
 
 func _toast(text: String) -> void:
