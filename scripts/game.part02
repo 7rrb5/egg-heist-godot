@@ -1,0 +1,99 @@
+: Vector3, guardian: Node, variant: int) -> void:
+	var root:=Node3D.new(); root.position=pos; root.name="Egg_%d_%d"%[index,variant]; add_child(root)
+	var s:=SphereMesh.new(); s.radial_segments=20; s.rings=12; s.height=2.35; s.radius=0.82
+	var mi:=MeshInstance3D.new(); mi.mesh=s; mi.scale=Vector3(1.0,1.35,1.0)
+	var col:Color=BIOMES[index].color.lightened(0.18)
+	var mat:=_color_mat(col, col.darkened(0.25) if index>=5 else Color.BLACK,0.34)
+	mi.material_override=mat; root.add_child(mi)
+	# Speckles/detail rings
+	for j in range(5):
+		var a:=j*TAU/5.0+variant*0.3; _sphere(root,Vector3(cos(a)*0.67,0.18+0.25*(j%2),sin(a)*0.67),Vector3(0.13,0.10,0.13),col.darkened(0.28))
+	root.set_meta("kind","egg"); root.set_meta("biome",index); root.set_meta("guardian",guardian); root.set_meta("income",pow(7.0,index)*110.0*(1.0+variant*0.08)); root.add_to_group("interactable"); eggs.append(root)
+
+func _build_safe_zone_details() -> void:
+	# Main road and spawn plaza
+	_static_box(self,Vector3(0,0.02,94),Vector3(17,0.08,150),_material("stone",Color(0.7,0.72,0.74)),false)
+	for z in range(25,166,22):
+		for x in [-12,12]:
+			_cylinder(self,Vector3(x,2.6,z),0.16,5.2,Color(0.1,0.12,0.15))
+			_sphere(self,Vector3(x,5.2,z),Vector3(0.38,0.38,0.38),Color(0.85,0.95,1.0),Color(0.55,0.8,1.0))
+	var title:=Label3D.new(); title.text="EGG HEIST  •  SAFE ZONE"; title.font_size=88; title.outline_size=20; title.position=Vector3(0,8.5,160); title.billboard=BaseMaterial3D.BILLBOARD_ENABLED; title.modulate=Color(0.8,1.0,0.84); add_child(title)
+
+func _build_farms() -> void:
+	for i in range(12):
+		var side := -1 if i<6 else 1
+		var row := i if i<6 else i-6
+		var center:=Vector3(side*42,0.04,151-row*26.0)
+		farm_centers.append(center)
+		_build_farm(i,center)
+
+func _build_farm(index: int, center: Vector3) -> void:
+	var floor_tint:=Color(1,1,1) if index==0 else Color(0.86,0.9,0.86)
+	_static_box(self,center+Vector3(0,-0.02,0),Vector3(34,0.10,22),_material("grass",floor_tint),false)
+	var wood:=_color_mat(Color(0.43,0.24,0.09))
+	# Low wooden pen; open gate toward central road.
+	for x in [-17,17]:
+		for z in [-9,-3,3,9]: _static_box(self,center+Vector3(x,1.0,z),Vector3(0.45,1.8,5.0),wood,false)
+	for zedge in [-11,11]:
+		for x in [-13,-7,7,13]: _static_box(self,center+Vector3(x,1.0,zedge),Vector3(5.2,1.8,0.45),wood,false)
+	# Farm board outside gate.
+	var board:=Node3D.new(); board.position=center+Vector3(-8*sign(center.x),2.4,-13.2); add_child(board)
+	_static_box(board,Vector3.ZERO,Vector3(10,4.5,0.55),_color_mat(Color(0.12,0.16,0.13)),false)
+	var lab:=Label3D.new(); lab.name="FarmLabel"; lab.font_size=40; lab.outline_size=10; lab.position=Vector3(0,0,-0.35); lab.billboard=BaseMaterial3D.BILLBOARD_ENABLED; board.add_child(lab)
+	board.set_meta("kind","farm_upgrade"); board.set_meta("farm_id",index); board.add_to_group("interactable"); farm_boards.append(board)
+	# Player farm includes treadmill; other plots show one too for online visual parity.
+	var treadmill:=_make_treadmill(center+Vector3(0,0,-5.8), index)
+	if index==0: player_treadmill=treadmill
+
+func _make_treadmill(pos: Vector3, farm_id: int) -> Node3D:
+	var root:=Node3D.new(); root.position=pos; root.name="Treadmill_%d"%farm_id; add_child(root)
+	root.set_meta("kind","treadmill"); root.set_meta("farm_id",farm_id); root.add_to_group("interactable")
+	_build_treadmill_visual(root, int(Save.data.treadmill_level) if farm_id==0 else 1)
+	var marker:=Node3D.new(); marker.name="RunMarker"; marker.position=Vector3(0,0.2,0.7); marker.rotation.y=PI; root.add_child(marker)
+	return root
+
+func _build_treadmill_visual(root: Node3D, level: int) -> void:
+	for c in root.get_children():
+		if c.name!="RunMarker": c.queue_free()
+	var dark:=_color_mat(Color(0.055,0.07,0.085),Color.BLACK,0.32,0.35)
+	var belt:=_color_mat(Color(0.09,0.11,0.13),Color.BLACK,0.8)
+	_static_box(root,Vector3(0,0.32,0),Vector3(3.2,0.38,6.4),dark,false)
+	_static_box(root,Vector3(0,0.56,0.25),Vector3(2.55,0.10,5.55),belt,false)
+	_static_box(root,Vector3(0,0.72,-2.8),Vector3(3.5,0.9,1.1),dark,false)
+	for x in [-1.45,1.45]:
+		var post:=_cylinder(root,Vector3(x,2.15,-2.55),0.16,3.4,Color(0.16,0.18,0.22),Vector3(0.12,0,0)); post.rotation.x=0.12
+		_cylinder(root,Vector3(x*0.86,3.55,-2.0),0.12,2.5,Color(0.15,0.17,0.2),Vector3(PI/2,0,0))
+	_static_box(root,Vector3(0,3.45,-2.45),Vector3(2.4,1.25,0.5),_color_mat(Color(0.06,0.09,0.13)),false)
+	_static_box(root,Vector3(0,3.47,-2.72),Vector3(1.65,0.65,0.05),_color_mat(Color(0.08,0.32,0.52),Color(0.08,0.48,1.0)),false)
+	if level>=2:
+		var glow:=Color(0.08,0.45+level*0.045,1.0)
+		for x in [-1.62,1.62]: _static_box(root,Vector3(x,0.6,0),Vector3(0.11,0.16,5.8),_color_mat(glow,glow),false)
+		for i in range(level-1):
+			var a:=i*TAU/max(1,level-1); _sphere(root,Vector3(cos(a)*2.0,0.65,sin(a)*2.7),Vector3(0.16,0.16,0.16),glow,glow)
+	if level>=5:
+		for x in [-1,1]:
+			var sp:=_cylinder(root,Vector3(x*2.0,1.5,-2.6),0.12,2.2,Color(0.1,0.7,1.0)); sp.material_override=_color_mat(Color(0.08,0.45,0.9),Color(0.1,0.6,1.0))
+
+func _build_shops() -> void:
+	_build_shop_building(Vector3(-18,0,154),"TREADMILL LAB","treadmill_shop",Color(0.08,0.52,1.0))
+	_build_shop_building(Vector3(18,0,154),"TRAILS SHOP","trail_shop",Color(0.78,0.2,1.0))
+
+func _build_shop_building(pos: Vector3, title: String, kind: String, neon: Color) -> void:
+	var root:=Node3D.new(); root.position=pos; add_child(root); root.set_meta("kind",kind); root.add_to_group("interactable")
+	_static_box(root,Vector3(0,3.2,0),Vector3(13,6.4,8),_color_mat(Color(0.07,0.09,0.12),Color.BLACK,0.35,0.25),false)
+	_static_box(root,Vector3(0,3.8,-4.05),Vector3(9.2,2.0,0.14),_color_mat(neon.darkened(0.6),neon),false)
+	var lab:=Label3D.new(); lab.text=title; lab.font_size=46; lab.outline_size=10; lab.position=Vector3(0,3.8,-4.2); lab.billboard=BaseMaterial3D.BILLBOARD_ENABLED; root.add_child(lab)
+	for x in [-5.7,5.7]:
+		_static_box(root,Vector3(x,3.2,-4.15),Vector3(0.18,5.5,0.16),_color_mat(neon,neon),false)
+
+func _spawn_player() -> void:
+	player=CharacterBody3D.new(); player.name="Player"; player.set_script(PlayerScript); player.position=Vector3(0,1.0,143); add_child(player)
+
+func _restore_pets() -> void:
+	var saved = Save.data.pets if Save.data.pets is Array else []
+	for p in saved:
+		if p is Dictionary: _spawn_pet(int(p.get("biome",0)), float(p.get("income",100.0)), false)
+
+func _spawn_pet(biome: int, income: float, persist := true) -> void:
+	if pet_nodes.size() >= Save.farm_capacity(): return
+	var rng:=RandomNumberGenerator.new(); rng.seed=pet_nodes.size()*173+bio
