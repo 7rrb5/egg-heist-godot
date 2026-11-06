@@ -86,28 +86,43 @@ func _run() -> void:
 	if shop_panel == null or not shop_panel.visible:
 		_fail("treadmill shop did not open")
 
-	var old_farm: int = int(Save.data.farm_level)
-	var old_cash: float = float(Save.data.cash)
-	Save.data.cash = 1.0e18
+	var save: Node = root.get_node_or_null("Save")
+	if save == null:
+		_fail("Save autoload missing")
+		quit(1)
+		return
+	var save_data: Dictionary = save.get("data")
+	var old_farm: int = int(save_data.farm_level)
+	var old_cash: float = float(save_data.cash)
+	save_data.cash = 1.0e18
+	save.set("data", save_data)
 	if old_farm < 13:
 		game.call("_upgrade_farm", 0)
 		await process_frame
-		if int(Save.data.farm_level) != old_farm + 1:
+		save_data = save.get("data")
+		if int(save_data.farm_level) != old_farm + 1:
 			_fail("farm upgrade failed")
-	Save.data.farm_level = old_farm
-	Save.data.cash = old_cash
+	save_data = save.get("data")
+	save_data.farm_level = old_farm
+	save_data.cash = old_cash
+	save.set("data", save_data)
 
-	var old_trail: int = int(Save.data.trail_level)
-	Save.data.cash = 1.0e18
+	save_data = save.get("data")
+	var old_trail: int = int(save_data.trail_level)
+	save_data.cash = 1.0e18
+	save.set("data", save_data)
 	game.set("current_shop", "trail")
 	if old_trail < 11:
 		game.call("_buy_shop")
 		await process_frame
-		if int(Save.data.trail_level) != old_trail + 1:
+		save_data = save.get("data")
+		if int(save_data.trail_level) != old_trail + 1:
 			_fail("trail purchase failed")
-	Save.data.trail_level = old_trail
-	Save.data.cash = old_cash
-	Save.save_data()
+	save_data = save.get("data")
+	save_data.trail_level = old_trail
+	save_data.cash = old_cash
+	save.set("data", save_data)
+	save.call("save_data")
 
 	if failed:
 		quit(1)
