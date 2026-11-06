@@ -1,0 +1,101 @@
+	for l in [cash_label,speed_label,farm_label]: l.add_theme_font_size_override("font_size",22)
+	prompt_label=Label.new(); prompt_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER; prompt_label.add_theme_font_size_override("font_size",24); prompt_label.position=Vector2(330,640); prompt_label.size=Vector2(620,42); hud_layer.add_child(prompt_label)
+	toast_label=Label.new(); toast_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER; toast_label.add_theme_font_size_override("font_size",22); toast_label.position=Vector2(300,72); toast_label.size=Vector2(680,42); toast_label.modulate=Color(1,0.92,0.32); hud_layer.add_child(toast_label)
+	var settings:=Button.new(); settings.text="⚙ SETTINGS"; settings.position=Vector2(1110,18); settings.size=Vector2(150,46); settings.pressed.connect(_toggle_settings); hud_layer.add_child(settings)
+	var interact:=Button.new(); interact.text="E
+INTERACT"; interact.position=Vector2(1120,575); interact.size=Vector2(120,110); interact.add_theme_font_size_override("font_size",20); interact.pressed.connect(func(): try_interact(player)); hud_layer.add_child(interact)
+	# Landscape-safe mobile joystick art. Touch handling itself is in player.gd.
+	var joy:=Panel.new(); joy.position=Vector2(32,552); joy.size=Vector2(132,132); joy.modulate=Color(0.4,0.55,0.7,0.28); joy.mouse_filter=Control.MOUSE_FILTER_IGNORE; hud_layer.add_child(joy)
+	var knob:=Panel.new(); knob.position=Vector2(39,39); knob.size=Vector2(54,54); knob.modulate=Color(0.75,0.9,1.0,0.4); knob.mouse_filter=Control.MOUSE_FILTER_IGNORE; joy.add_child(knob)
+	_build_settings_panel(); _build_shop_panel()
+
+func _build_settings_panel() -> void:
+	settings_panel=PanelContainer.new(); settings_panel.position=Vector2(880,78); settings_panel.size=Vector2(380,265); settings_panel.visible=false; hud_layer.add_child(settings_panel)
+	var vb:=VBoxContainer.new(); settings_panel.add_child(vb)
+	var title:=Label.new(); title.text="SETTINGS"; title.add_theme_font_size_override("font_size",26); vb.add_child(title)
+	var fs:=Button.new(); fs.text="⛶ FULL SCREEN"; fs.pressed.connect(_toggle_fullscreen); vb.add_child(fs)
+	var q:=OptionButton.new(); q.add_item("Graphics: High",0); q.add_item("Graphics: Balanced",1); q.add_item("Graphics: Mobile",2); q.item_selected.connect(_set_quality); vb.add_child(q)
+	var close:=Button.new(); close.text="CLOSE"; close.pressed.connect(func():settings_panel.visible=false); vb.add_child(close)
+
+func _build_shop_panel() -> void:
+	shop_panel=PanelContainer.new(); shop_panel.position=Vector2(390,155); shop_panel.size=Vector2(500,380); shop_panel.visible=false; hud_layer.add_child(shop_panel)
+	var vb:=VBoxContainer.new(); vb.add_theme_constant_override("separation",12); shop_panel.add_child(vb)
+	shop_title=Label.new(); shop_title.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER; shop_title.add_theme_font_size_override("font_size",32); vb.add_child(shop_title)
+	shop_info=Label.new(); shop_info.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; shop_info.add_theme_font_size_override("font_size",20); shop_info.custom_minimum_size=Vector2(450,190); vb.add_child(shop_info)
+	shop_buy=Button.new(); shop_buy.custom_minimum_size=Vector2(0,58); shop_buy.pressed.connect(_buy_shop); vb.add_child(shop_buy)
+	var close:=Button.new(); close.text="CLOSE"; close.pressed.connect(func():shop_panel.visible=false); vb.add_child(close)
+
+func _toggle_settings() -> void:
+	settings_panel.visible=not settings_panel.visible
+
+func _toggle_fullscreen() -> void:
+	var mode:=DisplayServer.window_get_mode()
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if mode==DisplayServer.WINDOW_MODE_FULLSCREEN else DisplayServer.WINDOW_MODE_FULLSCREEN)
+
+func _set_quality(index: int) -> void:
+	match index:
+		0:
+			get_viewport().scaling_3d_scale=1.0
+			RenderingServer.directional_shadow_atlas_set_size(4096,true)
+		1:
+			get_viewport().scaling_3d_scale=0.85
+			RenderingServer.directional_shadow_atlas_set_size(2048,true)
+		2:
+			get_viewport().scaling_3d_scale=0.68
+			RenderingServer.directional_shadow_atlas_set_size(1024,true)
+
+func _update_hud() -> void:
+	if not cash_label: return
+	cash_label.text="CASH   %s"%_fmt(float(Save.data.cash))
+	speed_label.text="SPEED  %s"%_fmt(float(Save.data.speed))
+	farm_label.text="FARM   Lv.%d / 13   •   %d/%d animals"%[int(Save.data.farm_level),pet_nodes.size(),Save.farm_capacity()]
+
+func _update_prompt() -> void:
+	if not player or not prompt_label: return
+	var best:Node3D=null; var d0:=8.0
+	for n in get_tree().get_nodes_in_group("interactable"):
+		if not is_instance_valid(n): continue
+		var d:=player.global_position.distance_to(n.global_position)
+		if d<d0: d0=d; best=n
+	if best==null: prompt_label.text=""; return
+	match str(best.get_meta("kind","")):
+		"egg": prompt_label.text="[E] STEAL EGG"
+		"treadmill": prompt_label.text="[E] TRAIN / STOP"
+		"farm_upgrade": prompt_label.text="[E] FARM UPGRADE"
+		"trail_shop": prompt_label.text="[E] OPEN TRAILS SHOP"
+		"treadmill_shop": prompt_label.text="[E] OPEN TREADMILL LAB"
+
+func _toast(text: String) -> void:
+	toast_label.text=text
+	var token:=Time.get_ticks_msec()
+	toast_label.set_meta("toast_token",token)
+	get_tree().create_timer(2.7).timeout.connect(func():
+		if toast_label.get_meta("toast_token",0)==token: toast_label.text=""
+	)
+
+func _tone(freq: float, duration: float, volume := 0.35) -> AudioStreamWAV:
+	var rate := 22050
+	var count := int(rate * duration)
+	var bytes := PackedByteArray(); bytes.resize(count * 2)
+	for i in range(count):
+		var env := 1.0 - float(i) / max(1.0, float(count))
+		var sample := int(sin(TAU * freq * float(i) / float(rate)) * 32767.0 * volume * env)
+		bytes[i*2] = sample & 255; bytes[i*2+1] = (sample >> 8) & 255
+	var wav := AudioStreamWAV.new(); wav.format = AudioStreamWAV.FORMAT_16_BITS; wav.mix_rate = rate; wav.stereo = false; wav.data = bytes
+	return wav
+
+func _play_one_shot(parent: Node, path: String) -> void:
+	var freq := 520.0
+	if "egg_pick" in path: freq = 760.0
+	elif "upgrade" in path: freq = 940.0
+	elif "buy" in path: freq = 620.0
+	var a := AudioStreamPlayer3D.new(); a.stream = _tone(freq, 0.16); a.max_distance = 70.0; parent.add_child(a); a.finished.connect(a.queue_free); a.play()
+
+func _fmt(v: float) -> String:
+	var a:=abs(v)
+	if a>=1e15: return "%.2fQ"%(v/1e15)
+	if a>=1e12: return "%.2fT"%(v/1e12)
+	if a>=1e9: return "%.2fB"%(v/1e9)
+	if a>=1e6: return "%.2fM"%(v/1e6)
+	if a>=1e3: return "%.1fK"%(v/1e3)
+	return str(int(v))
