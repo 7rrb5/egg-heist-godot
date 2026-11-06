@@ -39,14 +39,14 @@ func check_farm_delivery(p: CharacterBody3D) -> void:
 	if pet_nodes.size()>=Save.farm_capacity():
 		_toast("Farm full — upgrade the board outside your pen")
 		return
-	var egg:=p.carrying_egg; p.carrying_egg=null
+	var egg: Node3D = p.carrying_egg; p.carrying_egg=null
 	var biome:=int(egg.get_meta("biome",0)); var income:=float(egg.get_meta("income",100.0)); var g=egg.get_meta("guardian")
 	if is_instance_valid(g): g.calm_down()
 	egg.queue_free(); _spawn_pet(biome,income,true); _toast("New animal added to your farm  +%s/s"%_fmt(income))
 
 func on_player_hit(p: CharacterBody3D) -> void:
 	if p.carrying_egg:
-		var e:=p.carrying_egg; p.drop_egg(p.global_position+Vector3(0,0,1.8)); e.add_to_group("interactable")
+		var e: Node3D = p.carrying_egg; p.drop_egg(p.global_position+Vector3(0,0,1.8)); e.add_to_group("interactable")
 	_toast("The guardian caught you — egg dropped")
 	# Camera punch through temporary pivot tilt.
 	var tw:=create_tween(); tw.tween_property(p.pitch_pivot,"rotation:x",p.pitch_pivot.rotation.x+0.12,0.06); tw.tween_property(p.pitch_pivot,"rotation:x",p.pitch_pivot.rotation.x-0.12,0.16)
@@ -62,7 +62,7 @@ func _upgrade_farm(id: int) -> void:
 	if id!=0: _toast("This is another player's farm"); return
 	var lvl:=int(Save.data.farm_level)
 	if lvl>=13: _toast("Farm is already MAX Lv.13"); return
-	var price:=FARM_PRICES[lvl-1]
+	var price: float = float(FARM_PRICES[lvl-1])
 	if not Save.spend(price): _toast("Need %s cash"%_fmt(price)); return
 	Save.data.farm_level=lvl+1; Save.save_data(); _play_one_shot(player,"res://assets/audio/upgrade.wav"); _update_farm_board(); _toast("Farm upgraded to Lv.%d • capacity %d"%[lvl+1,Save.farm_capacity()])
 
@@ -101,7 +101,7 @@ Price: %s"%[cur.name,nxt.name,_fmt(nxt.price)]; shop_buy.text="BUY %s"%nxt.name;
 			shop_info.text="Treadmill Lv.8
 MAX LEVEL • strongest blue energy effects"; shop_buy.text="MAX"; shop_buy.disabled=true
 		else:
-			var price:=TREADMILL_PRICES[lvl2-1]; shop_info.text="Treadmill Lv.%d → Lv.%d
+			var price: float = float(TREADMILL_PRICES[lvl2-1]); shop_info.text="Treadmill Lv.%d → Lv.%d
 Training income increases heavily
 Visual model and blue effects upgrade every level
 Price: %s"%[lvl2,lvl2+1,_fmt(price)]; shop_buy.text="UPGRADE"; shop_buy.disabled=false
@@ -114,7 +114,7 @@ func _buy_shop() -> void:
 		Save.data.trail_level=lvl+1; Save.save_data(); player.refresh_trail(); _play_one_shot(player,"res://assets/audio/buy.wav")
 	else:
 		var lvl2:=int(Save.data.treadmill_level); if lvl2>=8: return
-		var price2:=TREADMILL_PRICES[lvl2-1]
+		var price2: float = float(TREADMILL_PRICES[lvl2-1])
 		if not Save.spend(price2): _toast("Not enough cash"); return
 		Save.data.treadmill_level=lvl2+1; Save.save_data(); _build_treadmill_visual(player_treadmill,lvl2+1); _play_one_shot(player,"res://assets/audio/upgrade.wav")
 	_refresh_shop_ui()
