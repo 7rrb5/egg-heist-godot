@@ -69,7 +69,7 @@ func _build_treadmill_visual(root: Node3D, level: int) -> void:
 		var glow:=Color(0.08,0.45+level*0.045,1.0)
 		for x in [-1.62,1.62]: _static_box(root,Vector3(x,0.6,0),Vector3(0.11,0.16,5.8),_color_mat(glow,glow),false)
 		for i in range(level-1):
-			var a:=i*TAU/max(1,level-1); _sphere(root,Vector3(cos(a)*2.0,0.65,sin(a)*2.7),Vector3(0.16,0.16,0.16),glow,glow)
+			var a: float = float(i) * TAU / float(max(1,level-1)); _sphere(root,Vector3(cos(a)*2.0,0.65,sin(a)*2.7),Vector3(0.16,0.16,0.16),glow,glow)
 	if level>=5:
 		for x in [-1,1]:
 			var sp:=_cylinder(root,Vector3(x*2.0,1.5,-2.6),0.12,2.2,Color(0.1,0.7,1.0)); sp.material_override=_color_mat(Color(0.08,0.45,0.9),Color(0.1,0.6,1.0))
