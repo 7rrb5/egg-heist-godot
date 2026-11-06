@@ -33,9 +33,11 @@ func _ready() -> void:
 	_build_trail()
 	carry_anchor.position = Vector3(0, 2.1, -1.2)
 	add_child(carry_anchor)
-	touch_enabled = OS.has_feature("web_android") or OS.has_feature("web_ios") or OS.has_feature("mobile")
+	touch_enabled = DisplayServer.is_touchscreen_available() or OS.has_feature("mobile")
 	if not touch_enabled:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	else:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 func _build_collision() -> void:
 	var cs := CollisionShape3D.new()
@@ -65,17 +67,35 @@ func _make_limb(pos: Vector3, size_v: Vector3, c: Color) -> Node3D:
 func _build_model() -> void:
 	model.name = "Avatar"
 	add_child(model)
-	# Higher-detail Roblox-like original avatar: shoes, limbs, layered shirt, head, hair.
-	_add_box(model, Vector3(0,1.6,0), Vector3(1.15,1.45,0.7), Color(0.07,0.12,0.2))
-	_add_box(model, Vector3(0,1.65,-0.38), Vector3(0.82,0.8,0.06), Color(0.05,0.55,0.95))
-	_add_sphere(model, Vector3(0,2.8,0), Vector3(0.66,0.72,0.64), Color(0.92,0.73,0.56))
-	_add_sphere(model, Vector3(0,3.15,0.02), Vector3(0.72,0.25,0.7), Color(0.16,0.08,0.04))
-	for x in [-0.22,0.22]: _add_sphere(model, Vector3(x,2.86,-0.57), Vector3(0.06,0.07,0.035), Color(0.05,0.05,0.06))
-	var la := _make_limb(Vector3(-0.78,2.25,0), Vector3(0.4,1.4,0.45), Color(0.92,0.73,0.56))
-	var ra := _make_limb(Vector3(0.78,2.25,0), Vector3(0.4,1.4,0.45), Color(0.92,0.73,0.56))
-	var ll := _make_limb(Vector3(-0.34,1.0,0), Vector3(0.52,1.65,0.58), Color(0.08,0.09,0.11))
-	var rl := _make_limb(Vector3(0.34,1.0,0), Vector3(0.52,1.65,0.58), Color(0.08,0.09,0.11))
-	for x in [-0.34,0.34]: _add_box(model, Vector3(x,0.1,-0.12), Vector3(0.62,0.32,0.9), Color(0.9,0.93,0.98))
+
+	var skin := Color(0.94,0.73,0.55)
+	var shirt := Color(0.055,0.075,0.11)
+	var pants := Color(0.035,0.045,0.065)
+	var accent := Color(0.12,0.62,1.0)
+
+	# Blocky proportions closer to a Roblox avatar.
+	_add_box(model, Vector3(0,1.78,0), Vector3(1.45,1.48,0.78), shirt)
+	_add_box(model, Vector3(0,1.82,-0.405), Vector3(0.92,0.82,0.055), accent)
+	_add_box(model, Vector3(0,2.93,0), Vector3(1.16,1.08,1.02), skin)
+
+	# Hair cap and front fringe.
+	_add_box(model, Vector3(0,3.50,0.03), Vector3(1.22,0.28,1.08), Color(0.12,0.065,0.035))
+	_add_box(model, Vector3(-0.34,3.34,-0.49), Vector3(0.38,0.34,0.10), Color(0.12,0.065,0.035))
+	_add_box(model, Vector3(0.28,3.31,-0.49), Vector3(0.44,0.29,0.10), Color(0.12,0.065,0.035))
+
+	# Simple face.
+	_add_box(model, Vector3(-0.23,3.02,-0.525), Vector3(0.105,0.12,0.035), Color(0.025,0.03,0.04))
+	_add_box(model, Vector3(0.23,3.02,-0.525), Vector3(0.105,0.12,0.035), Color(0.025,0.03,0.04))
+	_add_box(model, Vector3(0,2.77,-0.535), Vector3(0.30,0.055,0.03), Color(0.24,0.08,0.06))
+
+	_make_limb(Vector3(-0.92,2.37,0), Vector3(0.48,1.55,0.52), skin)
+	_make_limb(Vector3(0.92,2.37,0), Vector3(0.48,1.55,0.52), skin)
+	_make_limb(Vector3(-0.40,1.12,0), Vector3(0.58,1.72,0.62), pants)
+	_make_limb(Vector3(0.40,1.12,0), Vector3(0.58,1.72,0.62), pants)
+
+	for x in [-0.40,0.40]:
+		_add_box(model, Vector3(x,0.18,-0.16), Vector3(0.70,0.34,1.02), Color(0.91,0.94,0.98))
+		_add_box(model, Vector3(x,0.20,-0.57), Vector3(0.52,0.10,0.15), accent)
 
 func _build_camera() -> void:
 	yaw_pivot.position = Vector3(0,2.25,0)
@@ -83,12 +103,12 @@ func _build_camera() -> void:
 	yaw_pivot.add_child(pitch_pivot)
 	pitch_pivot.rotation.x = deg_to_rad(-16)
 	pitch_pivot.add_child(spring)
-	spring.spring_length = 8.5
+	spring.spring_length = 9.2
 	spring.margin = 0.25
 	spring.collision_mask = 1
 	spring.add_child(camera)
 	camera.current = true
-	camera.fov = 68.0
+	camera.fov = 66.0
 
 func _build_trail() -> void:
 	trail = MeshInstance3D.new()
